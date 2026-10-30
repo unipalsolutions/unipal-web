@@ -23,8 +23,9 @@ corepack enable --install-directory $HOME/.local/bin
 
 set -a; [ -f .env ] && . ./.env; set +a
 
-pnpm install --frozen-lockfile
-pnpm turbo run build --filter=$APP
+# Low concurrency and a heap cap keep small servers from running out of memory (add swap on 1-2 GB servers).
+pnpm install --frozen-lockfile --network-concurrency=4 --child-concurrency=1
+NODE_OPTIONS=--max-old-space-size=1536 pnpm turbo run build --filter=$APP --concurrency=1
 
 # The standalone server does not include static files; copy them next to it.
 cp -r apps/$APP/public apps/$APP/.next/standalone/apps/$APP/
