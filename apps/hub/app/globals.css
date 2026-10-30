@@ -1,0 +1,21 @@
+@import "tailwindcss";
+@import "@unipal/brand/css/theme.css";
+@import "@fontsource-variable/readex-pro";
+
+@source "../../../packages/ui/src";
+
+:root {
+  --up-font-sans: "Readex Pro Variable", "Readex Pro", system-ui, "Segoe UI", Tahoma, sans-serif;
+}
+
+html {
+  background: var(--up-background);
+  color: var(--up-foreground);
+  font-family: var(--up-font-sans);
+  -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100dvh;
+}

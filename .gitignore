@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.turbo/
+out/
+*.tsbuildinfo
+next-env.d.ts
+.env
+.env.*.local
+.env.local
+.DS_Store
+apps/*/public/brand/

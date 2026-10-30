@@ -1,0 +1,31 @@
+name: Deploy
+
+# Forge pulls and builds the branch itself; this workflow only triggers it once CI is green.
+# Quick Deploy stays off in Forge so an untested push never goes live.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
+    strategy:
+      matrix:
+        site: [sites, hub]
+    steps:
+      - name: Trigger Forge deploy hook
+        env:
+          HOOK: ${{ matrix.site == 'sites' && secrets.FORGE_DEPLOY_HOOK_SITES || secrets.FORGE_DEPLOY_HOOK_HUB }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::warning::No deploy hook secret for ${{ matrix.site }} in this environment; skipping."
+            exit 0
+          fi
+          curl -fsS -X POST "$HOOK"

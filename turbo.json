@@ -1,0 +1,18 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalEnv": ["NODE_ENV"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "env": ["UNIPAL_API_URL", "NEXT_PUBLIC_API_URL", "NEXT_PUBLIC_SITE_ENV", "NEXT_PUBLIC_DOWNLOAD_*"],
+      "outputs": [".next/**", "!.next/cache/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}
