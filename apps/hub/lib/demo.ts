@@ -1,45 +1,81 @@
-import type { BrandId } from '@unipal/brand';
+import type { CompanySlug, Lead, Project, Task } from '@unipal/api-client';
 
-// Sample data so the screens can be reviewed before the API exists.
-// Replace each export with an API call as its Laravel module lands; nothing else imports these shapes.
+// Sample data in the API's shapes, used only when UNIPAL_API_URL is not set (local development).
+// lib/data.ts picks between this and the API; screens never import this file directly.
 
-export type TaskStatus = 'backlog' | 'todo' | 'doing' | 'review' | 'done';
-export type Priority = 'low' | 'normal' | 'high';
+type Scoped<T> = T & { company: CompanySlug };
 
-export interface Task {
-  id: string;
-  title: string;
-  project: string;
-  company: BrandId;
-  assignee: string;
-  due?: string;
-  priority: Priority;
-  status: TaskStatus;
-}
+const user = (name: string) => ({ id: name, name, email: `${name}@unipal.group` });
 
-export const statuses: { id: TaskStatus; title: string }[] = [
-  { id: 'backlog', title: 'الأفكار' },
-  { id: 'todo', title: 'للتنفيذ' },
-  { id: 'doing', title: 'قيد العمل' },
-  { id: 'review', title: 'مراجعة' },
-  { id: 'done', title: 'مكتمل' },
+export const demoProjects: Scoped<Project>[] = [
+  { company: 'tax', id: 'p1', name: 'ملفات ضريبة الشركات', description: null, status: 'active', starts_on: null, due_on: null, created_at: '2026-10-01T00:00:00Z' },
+  { company: 'tax', id: 'p2', name: 'إقرارات VAT', description: null, status: 'active', starts_on: null, due_on: null, created_at: '2026-10-01T00:00:00Z' },
+  { company: 'advisors', id: 'p3', name: 'دراسات الجدوى', description: null, status: 'active', starts_on: null, due_on: null, created_at: '2026-10-01T00:00:00Z' },
+  { company: 'solutions', id: 'p4', name: 'منصة UniPal', description: null, status: 'active', starts_on: null, due_on: null, created_at: '2026-10-01T00:00:00Z' },
+  { company: 'group', id: 'p5', name: 'الشراكات', description: null, status: 'active', starts_on: null, due_on: null, created_at: '2026-10-01T00:00:00Z' },
 ];
 
-export const tasks: Task[] = [
-  { id: 't1', title: 'تسجيل ضريبة الشركات لعميل الإمارات للتجارة', project: 'ملفات ضريبة الشركات', company: 'tax', assignee: 'سارة', due: '2026-11-04', priority: 'high', status: 'doing' },
-  { id: 't2', title: 'إقرار القيمة المضافة للربع الثالث', project: 'إقرارات VAT', company: 'tax', assignee: 'محمد', due: '2026-11-28', priority: 'high', status: 'todo' },
-  { id: 't3', title: 'دراسة جدوى مطعم في دبي مارينا', project: 'دراسات الجدوى', company: 'advisors', assignee: 'ليلى', due: '2026-11-12', priority: 'normal', status: 'review' },
-  { id: 't4', title: 'نموذج بيانات وحدة العملاء', project: 'منصة UniPal', company: 'solutions', assignee: 'أحمد', priority: 'normal', status: 'doing' },
-  { id: 't5', title: 'إطلاق المواقع الأربعة على staging', project: 'منصة UniPal', company: 'solutions', assignee: 'أحمد', due: '2026-11-03', priority: 'high', status: 'todo' },
-  { id: 't6', title: 'هوية المجموعة البصرية', project: 'منصة UniPal', company: 'group', assignee: 'نور', priority: 'normal', status: 'done' },
-  { id: 't7', title: 'عقد شراكة مع مكتب محاسبة في الشارقة', project: 'الشراكات', company: 'group', assignee: 'خالد', priority: 'low', status: 'backlog' },
-  { id: 't8', title: 'تأسيس رخصة منطقة حرة لعميل جديد', project: 'تأسيس الشركات', company: 'advisors', assignee: 'ليلى', due: '2026-11-20', priority: 'normal', status: 'todo' },
-  { id: 't9', title: 'استيراد ورقة العملاء المحتملين', project: 'منصة UniPal', company: 'solutions', assignee: 'نور', priority: 'normal', status: 'backlog' },
+const task = (company: CompanySlug, id: string, title: string, project: string, assignee: string, status: Task['status'], priority: Task['priority'], due_on: string | null = null): Scoped<Task> => ({
+  company,
+  id,
+  title,
+  project: { id: demoProjects.find((p) => p.name === project)!.id, name: project },
+  assignee: user(assignee),
+  description: null,
+  status,
+  priority,
+  due_on,
+  position: 0,
+  completed_at: null,
+});
+
+export const demoTasks: Scoped<Task>[] = [
+  task('tax', 't1', 'تسجيل ضريبة الشركات لعميل الإمارات للتجارة', 'ملفات ضريبة الشركات', 'سارة', 'doing', 'high', '2026-11-04'),
+  task('tax', 't2', 'إقرار القيمة المضافة للربع الثالث', 'إقرارات VAT', 'محمد', 'todo', 'high', '2026-11-28'),
+  task('advisors', 't3', 'دراسة جدوى مطعم في دبي مارينا', 'دراسات الجدوى', 'ليلى', 'review', 'normal', '2026-11-12'),
+  task('solutions', 't4', 'نموذج بيانات وحدة العملاء', 'منصة UniPal', 'أحمد', 'done', 'normal'),
+  task('solutions', 't5', 'إطلاق المواقع الأربعة على staging', 'منصة UniPal', 'أحمد', 'todo', 'high', '2026-11-03'),
+  task('solutions', 't6', 'ربط لوحة التحكم بالخادم', 'منصة UniPal', 'نور', 'doing', 'normal', '2026-11-06'),
+  task('group', 't7', 'عقد شراكة مع مكتب محاسبة في الشارقة', 'الشراكات', 'خالد', 'backlog', 'low'),
 ];
 
-export const stats = [
-  { label: 'مشاريع نشطة', value: '12', note: '+3 هذا الشهر' },
-  { label: 'عملاء محتملون جدد', value: '27', note: 'من المواقع ونماذج التواصل' },
-  { label: 'مواعيد ضريبية خلال 30 يوماً', value: '8', note: '2 خلال هذا الأسبوع' },
-  { label: 'اشتراكات فعّالة', value: '41', note: 'AED 38,200 شهرياً' },
+const lead = (company: CompanySlug, n: number, contact: string, org: string | null, stage: Lead['stage'], probability: number, value: number | null, source: Lead['source'], follow: string | null): Scoped<Lead> => ({
+  company,
+  id: `l${company}${n}`,
+  reference: `${company.toUpperCase()}-${String(n).padStart(4, '0')}`,
+  stage,
+  source,
+  owner: user('سارة'),
+  organization_name: org,
+  contact_name: contact,
+  email: null,
+  phone: '+971500000000',
+  phone_alt: null,
+  industry: null,
+  services: company === 'tax' ? ['vat'] : [],
+  client_type: 'new',
+  proposal_value: value === null ? null : value.toFixed(2),
+  probability,
+  weighted_value: value === null ? null : ((value * probability) / 100).toFixed(2),
+  currency: 'AED',
+  expected_close_on: null,
+  last_contact_at: '2026-10-28T09:00:00Z',
+  days_since_last_contact: 3,
+  next_action: null,
+  next_follow_up_on: follow,
+  lost_reason: null,
+  message: null,
+  notes: null,
+  stage_changed_at: '2026-10-25T09:00:00Z',
+  days_in_stage: 6,
+  won_at: null,
+  created_at: '2026-10-20T09:00:00Z',
+});
+
+export const demoLeads: Scoped<Lead>[] = [
+  lead('tax', 1, 'عمر حسن', 'الإمارات للتجارة', 'proposal_sent', 50, 18000, 'referral', '2026-11-02'),
+  lead('tax', 2, 'سارة علي', null, 'new', 10, null, 'website', '2026-10-31'),
+  lead('tax', 3, 'Dominic Lewis', 'DLC Holdings', 'negotiation', 65, 42000, 'partner', '2026-11-05'),
+  lead('advisors', 1, 'ليلى أحمد', 'مطاعم المارينا', 'meeting_held', 40, 25000, 'linkedin', '2026-11-03'),
+  lead('solutions', 1, 'خالد يوسف', 'شركة الخليج', 'contacted', 20, 60000, 'event', null),
 ];

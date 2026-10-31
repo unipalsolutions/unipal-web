@@ -6,7 +6,7 @@ import { CompanySwitcher } from '@/components/company-switcher';
 import { SidebarNav, type NavSection } from '@/components/sidebar-nav';
 import { logout } from '@/lib/actions';
 import { moduleGroups, modules } from '@/lib/modules';
-import { currentCompany, requireUser } from '@/lib/session';
+import { accessibleCompanies, currentBrandId, requireUser } from '@/lib/session';
 
 const moduleHref = (slug: string, ready?: boolean) => (ready ? `/${slug}` : `/m/${slug}`);
 
@@ -21,7 +21,7 @@ const sections: NavSection[] = [
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await requireUser();
-  const company = await currentCompany();
+  const [company, companies] = [await currentBrandId(), await accessibleCompanies()];
   return (
     <div className="grid min-h-dvh md:grid-cols-[264px_minmax(0,1fr)]">
       <aside className="border-border bg-surface-raised max-md:border-b md:sticky md:top-0 md:h-dvh md:overflow-y-auto md:border-e">
@@ -42,7 +42,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       </aside>
       <div className="min-w-0">
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/90 px-5 backdrop-blur md:px-8">
-          <CompanySwitcher value={company} />
+          <CompanySwitcher value={company} companies={companies} />
           <div className="flex items-center gap-3 text-sm">
             <span className="grid size-8 place-items-center rounded-full bg-accent text-accent-foreground font-semibold" aria-hidden>
               {user.name.slice(0, 1).toUpperCase()}

@@ -23,10 +23,17 @@ and never `left`/`right` for layout.
   `data-brand="tax"` on any element switches the accent for that subtree.
 - Logo files are copied from the brand package into `public/brand/` by `scripts/copy-brand-assets.mjs`
   (runs before dev and build; the folder is git-ignored).
-- `apps/hub/lib/demo.ts` is sample data. Replace it with API calls module by module; do not grow it.
+- Hub data goes through `apps/hub/lib/data.ts` (reads) and `lib/mutations.ts` (server actions that write).
+  Both use the API when `UNIPAL_API_URL` is set; reads fall back to `lib/demo.ts` otherwise, writes say they
+  are disabled. Screens never import `demo.ts` or call the API directly. Every call is scoped to the company
+  chosen in the header (`/v1/companies/{slug}/...`).
+- API response types live in `packages/api-client/src/types.ts` and mirror the Resources in unipal-api.
 - Auth belongs to the API (Sanctum). The hub stores the API token in an httpOnly cookie; the cookie's user
-  is only for display, and every data request must go to the API with the token.
-  With no `UNIPAL_API_URL`, `next dev` signs in any email (demo). Production never does.
+  is only for display, and every data request goes to the API with the token. A 401 sends the user to
+  `/logout`, which clears the cookie. With no `UNIPAL_API_URL`, `next dev` signs in any email (demo).
+  Production never does.
+- Show actions only when the company's `abilities` allow them (`can('crm.manage')` in `lib/session.ts`);
+  the API enforces the same rules.
 
 ## Commands
 

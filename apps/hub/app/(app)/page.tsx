@@ -1,30 +1,41 @@
 import Link from 'next/link';
-import { brands } from '@unipal/brand';
 import { Badge, Card, CardTitle } from '@unipal/ui';
+import { DemoNotice } from '@/components/demo-notice';
 import { PageHeader } from '@/components/page-header';
-import { stats, statuses, tasks } from '@/lib/demo';
+import { getPipeline, getTasks } from '@/lib/data';
+import { formatAed, formatDate, statusLabels } from '@/lib/labels';
 import { modules } from '@/lib/modules';
-import { requireUser } from '@/lib/session';
-
-const formatDate = (iso: string) => new Intl.DateTimeFormat('ar-AE', { day: 'numeric', month: 'long' }).format(new Date(iso));
+import { currentCompany, requireUser } from '@/lib/session';
 
 export default async function DashboardPage() {
   const user = await requireUser();
-  const upcoming = tasks.filter((t) => t.due && t.status !== 'done').sort((a, b) => a.due!.localeCompare(b.due!)).slice(0, 5);
-  const statusTitle = Object.fromEntries(statuses.map((s) => [s.id, s.title]));
+  const company = await currentCompany();
+  const [pipeline, tasks] = await Promise.all([getPipeline(), getTasks()]);
+  const open = tasks.filter((t) => t.status !== 'done');
+  const upcoming = open.filter((t) => t.due_on).sort((a, b) => a.due_on!.localeCompare(b.due_on!)).slice(0, 6);
+  const won = pipeline.stages.find((s) => s.stage === 'won');
+
+  const stats = [
+    { label: 'عملاء محتملون مفتوحون', value: pipeline.open_leads.toLocaleString('en-US'), href: '/crm' },
+    { label: 'التوقع المرجّح', value: formatAed(pipeline.weighted_forecast), href: '/crm' },
+    { label: 'متابعات مستحقة', value: pipeline.follow_ups_due.toLocaleString('en-US'), href: '/crm?follow_up_due=1' },
+    { label: 'مهام مفتوحة', value: open.length.toLocaleString('en-US'), note: `${won?.leads ?? 0} صفقات مكسوبة`, href: '/projects' },
+  ];
 
   return (
     <>
-      <PageHeader title={`أهلاً ${user.name}`} description="ملخص أعمال المجموعة اليوم." />
-      <p className="-mt-5 mb-6 text-xs text-foreground-muted">بيانات تجريبية حتى يُربط الخادم.</p>
+      <PageHeader title={`أهلاً ${user.name}`} description={`ملخص ${company?.name_ar ?? 'المجموعة'} اليوم.`} />
+      <DemoNotice />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((s) => (
-          <Card key={s.label}>
+          <Link key={s.label} href={s.href} className="rounded-lg border border-border bg-surface-raised p-5 shadow-sm transition-shadow hover:shadow-md">
             <p className="text-sm text-foreground-muted">{s.label}</p>
-            <p className="mt-2 text-3xl font-bold">{s.value}</p>
-            <p className="mt-1 text-xs text-foreground-muted">{s.note}</p>
-          </Card>
+            <p className="mt-2 text-3xl font-bold" dir="ltr">
+              {s.value}
+            </p>
+            {s.note && <p className="mt-1 text-xs text-foreground-muted">{s.note}</p>}
+          </Link>
         ))}
       </div>
 
@@ -36,21 +47,24 @@ export default async function DashboardPage() {
               كل المهام
             </Link>
           </div>
-          <ul className="divide-y divide-border">
-            {upcoming.map((t) => (
-              <li key={t.id} className="flex items-center gap-4 px-5 py-3">
-                <span data-brand={t.company} className="size-2.5 shrink-0 rounded-full bg-accent" title={brands[t.company].nameAr} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{t.title}</p>
-                  <p className="text-xs text-foreground-muted">
-                    {t.project} · {t.assignee}
-                  </p>
-                </div>
-                <Badge tone={t.priority === 'high' ? 'danger' : 'neutral'}>{statusTitle[t.status]}</Badge>
-                <span className="w-20 shrink-0 text-end text-sm text-foreground-muted">{formatDate(t.due!)}</span>
-              </li>
-            ))}
-          </ul>
+          {upcoming.length === 0 ? (
+            <p className="px-5 pb-6 text-sm text-foreground-muted">لا مهام بمواعيد قادمة.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {upcoming.map((t) => (
+                <li key={t.id} className="flex items-center gap-4 px-5 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{t.title}</p>
+                    <p className="text-xs text-foreground-muted">
+                      {t.project?.name} · {t.assignee?.name ?? 'بلا مسؤول'}
+                    </p>
+                  </div>
+                  <Badge tone={t.priority === 'high' ? 'danger' : 'neutral'}>{statusLabels[t.status]}</Badge>
+                  <span className="w-20 shrink-0 text-end text-sm text-foreground-muted">{formatDate(t.due_on)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
 
         <Card>
