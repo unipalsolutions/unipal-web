@@ -2,9 +2,8 @@
 
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { brandIds } from '@unipal/brand';
-import { ApiError, createApiClient } from '@unipal/api-client';
-import { COMPANY_COOKIE, SESSION_COOKIE, demoLoginEnabled } from './session';
+import { ApiError, createApiClient, type TokenResponse } from '@unipal/api-client';
+import { COMPANY_COOKIE, SESSION_COOKIE, accessibleCompanies, demoLoginEnabled, encodeSession, hubApi } from './session';
 
 export interface LoginState {
   error?: string;
@@ -28,11 +27,11 @@ export async function login(_prev: LoginState, form: FormData): Promise<LoginSta
   const baseUrl = process.env.UNIPAL_API_URL;
   if (baseUrl) {
     try {
-      session = await createApiClient({ baseUrl }).post('/auth/token', { email, password, device_name: 'hub' });
+      const { token, user } = await createApiClient({ baseUrl }).post<TokenResponse>('/auth/token', { email, password, device_name: 'hub' });
+      session = { user: { name: user.name, email: user.email }, token };
     } catch (error) {
-      if (error instanceof ApiError && (error.status === 401 || error.status === 422)) {
-        return { error: 'البريد أو كلمة المرور غير صحيحة.', email };
-      }
+      if (error instanceof ApiError && error.status === 422) return { error: 'البريد أو كلمة المرور غير صحيحة.', email };
+      if (error instanceof ApiError && error.status === 429) return { error: 'محاولات كثيرة. انتظر دقيقة ثم حاول.', email };
       return { error: 'تعذّر الاتصال بالخادم. حاول بعد قليل.', email };
     }
   } else if (demoLoginEnabled()) {
@@ -41,18 +40,20 @@ export async function login(_prev: LoginState, form: FormData): Promise<LoginSta
     return { error: 'تسجيل الدخول غير متاح: الخادم غير مُعدّ.', email };
   }
 
-  (await cookies()).set(SESSION_COOKIE, Buffer.from(JSON.stringify(session)).toString('base64url'), cookieOptions);
+  (await cookies()).set(SESSION_COOKIE, encodeSession(session), cookieOptions);
   redirect('/');
 }
 
 export async function logout() {
+  // Revoke the token on the API too; signing out still works if the API is unreachable.
+  await (await hubApi().catch(() => null))?.post('/auth/logout').catch(() => undefined);
   (await cookies()).delete(SESSION_COOKIE);
   redirect('/login');
 }
 
 export async function switchCompany(form: FormData) {
-  const company = String(form.get('company'));
-  if ((brandIds as string[]).includes(company)) {
-    (await cookies()).set(COMPANY_COOKIE, company, { ...cookieOptions, maxAge: 60 * 60 * 24 * 365 });
+  const slug = String(form.get('company'));
+  if ((await accessibleCompanies()).some((c) => c.slug === slug)) {
+    (await cookies()).set(COMPANY_COOKIE, slug, { ...cookieOptions, maxAge: 60 * 60 * 24 * 365 });
   }
 }

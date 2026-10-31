@@ -1,20 +1,35 @@
 'use client';
 
-import { useMemo, useState, type DragEvent } from 'react';
-import { brands, type BrandId } from '@unipal/brand';
+import { useEffect, useState, useTransition, type DragEvent } from 'react';
+import type { Task, TaskStatus } from '@unipal/api-client';
 import { Badge, cn } from '@unipal/ui';
-import type { Task, TaskStatus } from '@/lib/demo';
+import { moveTask } from '@/lib/mutations';
+import { priorityLabels, statusLabels } from '@/lib/labels';
 
-const priorityLabel = { high: 'عاجل', normal: 'عادي', low: 'منخفض' } as const;
+const columns = Object.keys(statusLabels) as TaskStatus[];
 
-export function Board({ statuses, initialTasks }: { statuses: { id: TaskStatus; title: string }[]; initialTasks: Task[] }) {
+export function Board({ initialTasks, canManage }: { initialTasks: Task[]; canManage: boolean }) {
   const [items, setItems] = useState(initialTasks);
-  const [company, setCompany] = useState<BrandId | 'all'>('all');
   const [over, setOver] = useState<TaskStatus | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
 
-  const visible = useMemo(() => items.filter((t) => company === 'all' || t.company === company), [items, company]);
+  // A save elsewhere on the page (new task, another tab's move) re-renders with fresh server data.
+  useEffect(() => setItems(initialTasks), [initialTasks]);
 
-  const move = (id: string, status: TaskStatus) => setItems((all) => all.map((t) => (t.id === id ? { ...t, status } : t)));
+  // Optimistic: the card moves at once and goes back if the API refuses.
+  const move = (id: string, status: TaskStatus) => {
+    const before = items;
+    const position = items.filter((t) => t.status === status).length;
+    setItems((all) => all.map((t) => (t.id === id ? { ...t, status, position } : t)));
+    startTransition(async () => {
+      const result = await moveTask(id, status, position);
+      if (result.error && !result.error.startsWith('وضع التجربة')) {
+        setItems(before);
+        setError(result.error);
+      }
+    });
+  };
 
   const onDrop = (status: TaskStatus) => (e: DragEvent) => {
     e.preventDefault();
@@ -25,75 +40,65 @@ export function Board({ statuses, initialTasks }: { statuses: { id: TaskStatus; 
 
   return (
     <>
-      <div role="group" aria-label="تصفية حسب الشركة" className="mb-5 flex flex-wrap gap-2">
-        {(['all', ...Object.keys(brands)] as const).map((id) => (
-          <button
-            key={id}
-            type="button"
-            data-brand={id === 'all' ? undefined : id}
-            aria-pressed={company === id}
-            onClick={() => setCompany(id as BrandId | 'all')}
-            className={cn(
-              'flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-sm hover:bg-surface',
-              company === id && 'border-foreground bg-surface font-semibold',
-            )}
-          >
-            {id !== 'all' && <span className="size-2 rounded-full bg-accent" />}
-            {id === 'all' ? 'كل الشركات' : brands[id as BrandId].nameAr}
-          </button>
-        ))}
-      </div>
-
+      {error && (
+        <p role="alert" className="mb-4 text-sm font-medium text-danger">
+          {error}
+        </p>
+      )}
       <div className="flex gap-4 overflow-x-auto pb-4">
-        {statuses.map((col) => {
-          const cards = visible.filter((t) => t.status === col.id);
+        {columns.map((col) => {
+          const cards = items.filter((t) => t.status === col);
           return (
             <section
-              key={col.id}
-              aria-label={col.title}
+              key={col}
+              aria-label={statusLabels[col]}
               onDragOver={(e) => {
+                if (!canManage) return;
                 e.preventDefault();
-                setOver(col.id);
+                setOver(col);
               }}
-              onDragLeave={() => setOver((o) => (o === col.id ? null : o))}
-              onDrop={onDrop(col.id)}
-              className={cn('flex w-72 shrink-0 flex-col rounded-lg bg-surface p-3', over === col.id && 'outline-2 outline-dashed outline-accent')}
+              onDragLeave={() => setOver((o) => (o === col ? null : o))}
+              onDrop={onDrop(col)}
+              className={cn('flex w-72 shrink-0 flex-col rounded-lg bg-surface p-3', over === col && 'outline-2 outline-dashed outline-accent')}
             >
               <h2 className="mb-3 flex items-center justify-between px-1 text-sm font-semibold">
-                {col.title}
+                {statusLabels[col]}
                 <span className="text-foreground-muted">{cards.length}</span>
               </h2>
               <div className="grid gap-2">
                 {cards.map((t) => (
                   <article
                     key={t.id}
-                    draggable
+                    draggable={canManage}
                     onDragStart={(e) => e.dataTransfer.setData('text/plain', t.id)}
-                    data-brand={t.company}
-                    className="relative cursor-grab rounded-md border border-border border-s-4 border-s-accent bg-surface-raised p-3 shadow-sm active:cursor-grabbing"
+                    className={cn('relative rounded-md border border-border border-s-4 border-s-accent bg-surface-raised p-3 shadow-sm', canManage && 'cursor-grab active:cursor-grabbing')}
                   >
                     <p className="text-sm font-medium leading-snug">{t.title}</p>
-                    <p className="mt-1 text-xs text-foreground-muted">{t.project}</p>
+                    <p className="mt-1 text-xs text-foreground-muted">{t.project?.name}</p>
                     <div className="mt-3 flex items-center justify-between gap-2">
-                      <Badge tone={t.priority === 'high' ? 'danger' : t.priority === 'low' ? 'neutral' : 'accent'}>{priorityLabel[t.priority]}</Badge>
-                      <span className="text-xs text-foreground-muted">{t.assignee}</span>
+                      <Badge tone={t.priority === 'high' ? 'danger' : t.priority === 'low' ? 'neutral' : 'accent'}>{priorityLabels[t.priority]}</Badge>
+                      <span className="text-xs text-foreground-muted">{t.assignee?.name}</span>
                     </div>
-                    {/* Keyboard and touch users move cards with this menu instead of dragging. */}
-                    <label className="sr-only" htmlFor={`status-${t.id}`}>
-                      نقل إلى
-                    </label>
-                    <select
-                      id={`status-${t.id}`}
-                      value={t.status}
-                      onChange={(e) => move(t.id, e.target.value as TaskStatus)}
-                      className="mt-3 h-8 w-full rounded border border-border bg-background px-2 text-xs md:sr-only md:focus:not-sr-only"
-                    >
-                      {statuses.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.title}
-                        </option>
-                      ))}
-                    </select>
+                    {canManage && (
+                      <>
+                        {/* Keyboard and touch users move cards with this menu instead of dragging. */}
+                        <label className="sr-only" htmlFor={`status-${t.id}`}>
+                          نقل إلى
+                        </label>
+                        <select
+                          id={`status-${t.id}`}
+                          value={t.status}
+                          onChange={(e) => move(t.id, e.target.value as TaskStatus)}
+                          className="mt-3 h-8 w-full rounded border border-border bg-background px-2 text-xs md:sr-only md:focus:not-sr-only"
+                        >
+                          {columns.map((s) => (
+                            <option key={s} value={s}>
+                              {statusLabels[s]}
+                            </option>
+                          ))}
+                        </select>
+                      </>
+                    )}
                   </article>
                 ))}
               </div>

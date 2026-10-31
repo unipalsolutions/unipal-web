@@ -32,13 +32,7 @@ export const modules: HubModule[] = [
     group: 'work',
     plan: ['أرشفة تلقائية حسب سياسة الاحتفاظ', 'بحث في النصوص', 'سجل من اطّلع ومن عدّل'],
   },
-  {
-    slug: 'crm',
-    title: 'العملاء',
-    description: 'العملاء المحتملون، الصفقات، ومصادرها.',
-    group: 'business',
-    plan: ['استيراد ورقة العملاء المحتملين الحالية', 'مراحل الصفقة كما في Tax CRM', 'نماذج المواقع تصل هنا مباشرة'],
-  },
+  { slug: 'crm', title: 'العملاء', description: 'العملاء المحتملون، مراحل الصفقة، والمتابعات.', group: 'business', ready: true },
   {
     slug: 'services',
     title: 'الخدمات والاشتراكات',

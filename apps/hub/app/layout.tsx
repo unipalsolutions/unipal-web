@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { currentCompany } from '@/lib/session';
+import { currentBrandId } from '@/lib/session';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="ar" dir="rtl" data-brand={await currentCompany()}>
+    <html lang="ar" dir="rtl" data-brand={await currentBrandId()}>
       <body>{children}</body>
     </html>
   );

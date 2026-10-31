@@ -1,6 +1,5 @@
 // Thin client for the UniPal Laravel API (api.unipal.group/v1).
-// Typed endpoints will be generated from the API's OpenAPI document once it exists;
-// until then, call sites use `request` with their own types.
+// Response shapes of the v1 endpoints live in ./types; they mirror the API Resources in unipal-api.
 
 export class ApiError extends Error {
   constructor(
@@ -49,7 +48,11 @@ export function createApiClient({ baseUrl, token, fetch: fetcher = fetch }: ApiC
     request,
     get: <T>(path: string, init?: RequestInit) => request<T>('GET', path, undefined, init),
     post: <T>(path: string, body?: unknown, init?: RequestInit) => request<T>('POST', path, body, init),
+    patch: <T>(path: string, body?: unknown, init?: RequestInit) => request<T>('PATCH', path, body, init),
+    delete: <T = void>(path: string, init?: RequestInit) => request<T>('DELETE', path, undefined, init),
   };
 }
 
 export type ApiClient = ReturnType<typeof createApiClient>;
+
+export * from './types';

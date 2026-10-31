@@ -1,10 +1,10 @@
 'use client';
 
 import { useRef } from 'react';
-import { brands, type BrandId } from '@unipal/brand';
+import type { Company } from '@unipal/api-client';
 import { switchCompany } from '@/lib/actions';
 
-export function CompanySwitcher({ value }: { value: BrandId }) {
+export function CompanySwitcher({ value, companies }: { value: string; companies: Company[] }) {
   const form = useRef<HTMLFormElement>(null);
   return (
     <form ref={form} action={switchCompany}>
@@ -18,9 +18,9 @@ export function CompanySwitcher({ value }: { value: BrandId }) {
         onChange={() => form.current?.requestSubmit()}
         className="h-9 rounded-md border border-border-strong bg-background px-2 text-sm"
       >
-        {Object.values(brands).map((b) => (
-          <option key={b.id} value={b.id}>
-            {b.nameAr}
+        {companies.map((c) => (
+          <option key={c.slug} value={c.slug}>
+            {c.name_ar}
           </option>
         ))}
       </select>
